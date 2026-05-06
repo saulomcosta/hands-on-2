@@ -1,0 +1,72 @@
+
+spring:
+  # =========================
+  # CONFIGURAÇÃO DA APLICAÇÃO
+  # =========================
+  application:
+    # Nome lógico da aplicação dentro do ecossistema Spring.
+    # Pode ser usado em logs, monitoramento, tracing, etc.
+    name: arquiteto
+
+  # =========================
+  # CONFIGURAÇÃO DO BANCO DE DADOS (DataSource)
+  # =========================
+  datasource:
+    # URL de conexão JDBC para o PostgreSQL:
+    # - localhost → banco rodando localmente
+    # - 5432 → porta padrão do PostgreSQL
+    # - orders → nome do banco
+    url: jdbc:postgresql://localhost:5432/orders
+    # Driver JDBC responsável pela comunicação Java ↔ PostgreSQL
+    driverClassName: org.postgresql.Driver
+    # Usuário do banco de dados
+    username: postgres
+    # Senha do usuário do banco de dados
+    password: postgres
+
+  # =========================
+  # CONFIGURAÇÃO DO JPA / HIBERNATE
+  # =========================
+  jpa:
+    hibernate:
+      # Estratégia de manipulação do schema do banco:
+
+      # opções comuns:
+      # create   → apaga e recria tabelas a cada startup
+      # update   → atualiza schema automaticamente
+      # create-drop → cria ao iniciar e apaga ao parar
+      # validate → APENAS valida se estrutura existe (mais seguro em produção)
+
+      # Aqui você escolheu "validate":
+      # → o Hibernate NÃO cria tabelas
+      # → apenas verifica se o schema está correto
+      ddl-auto: validate
+    # Exibe no console todas as queries SQL geradas pelo Hibernate
+    # útil para debug e aprendizado
+    show-sql: true
+    properties:
+      hibernate:
+        # Dialeto do banco:
+        # informa ao Hibernate como gerar SQL específico do PostgreSQL
+
+        # OBS:
+        # versões modernas do Hibernate detectam automaticamente,
+        # então essa configuração muitas vezes é opcional
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # =========================
+  # CONSOLE DO H2 (DESENVOLVIMENTO)
+  # =========================
+  h2:
+    console:
+      # Habilita console web do H2 (banco em memória)
+
+      # IMPORTANTE:
+      # No seu caso você está usando PostgreSQL,
+      # então isso só tem efeito se você também estiver usando H2 em algum profile.
+      #
+      # Normalmente usado em:
+      # - testes
+      # - ambiente local leve
+      # - aprendizado
+      enabled: true
