@@ -6,7 +6,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 // Indica que essa classe é um componente gerenciado pelo Spring
 // permitindo injeção de dependências e uso em outros serviços
 import org.springframework.stereotype.Service;
-
 import com.hands_on.arquiteto.config.RabbitConfig;
 // Importa a entidade Order (objeto que será enviado como mensagem)
 import com.hands_on.arquiteto.entity.Order;
@@ -22,8 +21,7 @@ public class OrderPublisher {
     /*
      * 🔧 Injeção de dependência via construtor
      *
-     * O Spring injeta automaticamente o RabbitTemplate, que é o componente
-     * responsável por: -
+     * O Spring injeta automaticamente o RabbitTemplate, que é o componente responsável por: -
      * Conectar com o RabbitMQ - Enviar mensagens (Producer)
      *
      * 🧠 RabbitTemplate funciona como um "client" do RabbitMQ
@@ -39,11 +37,9 @@ public class OrderPublisher {
     /*
      * 🧠 Este método representa um EVENTO de negócio: "Um pedido foi criado"
      *
-     * Ele será chamado geralmente dentro do OrderService, após salvar um pedido no
-     * banco.
+     * Ele será chamado geralmente dentro do OrderService, após salvar um pedido no banco.
      *
-     * Em vez de chamar diretamente PaymentService ou EmailService, enviamos uma
-     * mensagem para o
+     * Em vez de chamar diretamente PaymentService ou EmailService, enviamos uma mensagem para o
      * RabbitMQ (arquitetura assíncrona).
      */
     public void publishOrderCreated(Order order) {
@@ -52,8 +48,7 @@ public class OrderPublisher {
         /*
          * 📤 Envio da mensagem para o RabbitMQ
          *
-         * convertAndSend: - Converte automaticamente o objeto Order para JSON - Envia
-         * para a
+         * convertAndSend: - Converte automaticamente o objeto Order para JSON - Envia para a
          * exchange configurada
          *
          * Parâmetros:
@@ -66,8 +61,7 @@ public class OrderPublisher {
          *
          * 🧠 O que acontece internamente:
          *
-         * OrderPublisher ↓ Exchange (order.exchange) ↓ (routing key: order.created)
-         * Queue
+         * OrderPublisher ↓ Exchange (order.exchange) ↓ (routing key: order.created) Queue
          * (payment.queue) ↓ Consumer (ex: PaymentService)
          */
         rabbitTemplate.convertAndSend(RabbitConfig.EXCHANGE, RabbitConfig.ROUTING_KEY, order);
