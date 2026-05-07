@@ -24,7 +24,7 @@ import com.hands_on.arquiteto.service.OrderService;
  * prefixo base de todas as rotas
  */
 @RestController
-@RequestMapping("/orders-2")
+@RequestMapping("/orders")
 public class OrderController {
 
     /**
