@@ -53,6 +53,42 @@ spring:
         # versões modernas do Hibernate detectam automaticamente,
         # então essa configuração muitas vezes é opcional
         dialect: org.hibernate.dialect.PostgreSQLDialect
+    # Configuração de conexão com o broker RabbitMQ
+    # O RabbitMQ é responsável por mensageria assíncrona na aplicação,
+    # permitindo comunicação desacoplada entre serviços (ex: pedidos, pagamento, email)
+    # 🧠 Como isso é usado na aplicação:
+    # O Spring Boot usa essas configurações automaticamente para:
+    # - Criar conexão com o RabbitMQ
+    # - Gerenciar envio de mensagens (Producer)
+    # - Consumir mensagens (Consumer)
+    # - Integrar com filas, exchanges e bindings
+    # 📌 Exemplo de uso no projeto (futuro):
+    # - OrderService pode enviar evento: "ORDER_CREATED"
+    # - PaymentService pode consumir essa mensagem
+    # - EmailService pode reagir após pagamento confirmado
+    # 🚀 Benefícios:
+    # - Desacoplamento entre serviços
+    # - Escalabilidade
+    # - Processamento assíncrono
+    # - Maior resiliência (evita falha em cascata)
+    # ⚠️ Observação importante:
+    # Se estiver rodando via Docker Compose, use:
+    # host: rabbitmq
+    # (nome do serviço no docker-compose)
+    rabbitmq:
+      # Endereço do servidor RabbitMQ
+      # "localhost" indica que está rodando na mesma máquina da aplicação
+      # ⚠️ Se estiver usando Docker, normalmente será o nome do container (ex: rabbitmq)
+      host: localhost
+      # Porta padrão do protocolo AMQP (usado para envio/recebimento de mensagens)
+      # Essa é a porta que sua aplicação usa para se conectar ao broker
+      port: 5672
+      # Usuário padrão do RabbitMQ
+      # ⚠️ Em produção, NÃO usar "guest" por questões de segurança
+      username: guest
+      # Senha do usuário do RabbitMQ
+      # ⚠️ Também deve ser alterada em ambientes reais
+      password: guest
 
   # =========================
   # CONSOLE DO H2 (DESENVOLVIMENTO)

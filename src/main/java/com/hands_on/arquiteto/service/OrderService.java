@@ -1,113 +1,144 @@
 package com.hands_on.arquiteto.service;
 
 import java.math.BigDecimal;
+
 import org.springframework.stereotype.Service;
+
 import com.hands_on.arquiteto.entity.Order;
-import com.hands_on.arquiteto.integration.EmailService;
-import com.hands_on.arquiteto.integration.PaymentService;
+import com.hands_on.arquiteto.messaging.OrderPublisher;
 import com.hands_on.arquiteto.repository.OrderRepository;
 
 /**
- * CAMADA: SERVICE (Regra de Negócio / Orquestração do Domínio)
+ * ======== CAMADA: SERVICE (Regra de Negócio / Domínio) =========
  *
- * Responsabilidade principal: - Implementar regras de negócio da aplicação - Orquestrar chamadas
- * entre: → Banco de dados (Repository) → Serviços externos (Integration Layer) - Controlar o fluxo
- * completo de criação de um pedido (Order)
+ * Esta classe representa a camada de serviço da aplicação.
  *
- * IMPORTANTE: Esta camada NÃO expõe endpoints HTTP e NÃO deve saber nada sobre HTTP. Ela também NÃO
- * deve conter SQL direto (isso é do Repository).
+ * RESPONSABILIDADES PRINCIPAIS: - Implementar regras de negócio - Orquestrar o
+ * fluxo da aplicação -
+ * Coordenar comunicação entre camadas: → Controller (entrada HTTP) → Repository
+ * (persistência no
+ * banco) → Messaging (RabbitMQ)
  *
- * Ela é o "coração" da lógica da aplicação.
+ * IMPORTANTE: - NÃO deve conter lógica de transporte (HTTP, JSON, etc.) - NÃO
+ * deve acessar banco
+ * diretamente via SQL - NÃO deve conhecer detalhes de infraestrutura externa
  *
- * Fluxo típico: Controller → Service → Repository + Integrations
+ * Em termos arquiteturais: → Essa é a camada central da aplicação (coração do
+ * sistema)
+ *
+ * Fluxo geral: Controller → Service → Repository + Messaging
  */
 @Service
 public class OrderService {
 
     /**
-     * Repositório responsável por persistência no banco de dados.
+     * Repositório de persistência (Spring Data JPA)
      *
-     * Aqui usamos o padrão Repository do Spring Data JPA: - abstrai SQL - trabalha com entidades
-     * Java
+     * Função: - Salvar, buscar e manipular entidades no banco - Abstrai
+     * completamente SQL
+     *
+     * Aqui usamos: → PostgreSQL via Hibernate (JPA)
      */
     private final OrderRepository orderRepository;
     /**
-     * Serviço externo responsável por pagamento.
+     * Componente responsável por publicar eventos no RabbitMQ
      *
-     * Representa integração com sistemas externos (gateway de pagamento, API etc)
-     */
-    private final PaymentService paymentService;
-    /**
-     * Serviço externo responsável por envio de email.
+     * Função: - Enviar mensagens para outras partes do sistema - Permitir
+     * arquitetura orientada a
+     * eventos (event-driven)
      *
-     * Também é uma integração (pode ser SMTP, API externa, etc)
+     * Neste caso: → Publica evento "pedido criado"
      */
-    private final EmailService emailService;
+    private final OrderPublisher orderPublisher;
 
     /**
-     * Construtor com injeção de dependências (Dependency Injection).
+     * Injeção de dependências via construtor (boa prática)
      *
-     * O Spring automaticamente injeta: - Repository - PaymentService - EmailService
-     *
-     * Isso reduz acoplamento e facilita testes unitários.
+     * O Spring automaticamente injeta: - OrderRepository - OrderPublisher
      */
-    public OrderService(OrderRepository orderRepository, PaymentService paymentService,
-            EmailService emailService) {
+    public OrderService(OrderRepository orderRepository, OrderPublisher orderPublisher) {
         this.orderRepository = orderRepository;
-        this.paymentService = paymentService;
-        this.emailService = emailService;
+        this.orderPublisher = orderPublisher;
     }
 
     /**
-     * CASO DE USO PRINCIPAL: Criar pedido (Order)
+     * ========= CASO DE USO: Criar um novo pedido (Order) =========
      *
-     * Este método representa o fluxo completo de negócio:
+     * Este método representa um fluxo de negócio completo.
      *
-     * 1. Cria um pedido com status inicial "CREATED" 2. Persiste no banco de dados 3. Processa
-     * pagamento (serviço externo) 4. Envia email de confirmação 5. Atualiza status para "COMPLETED"
-     * 6. Persiste novamente o estado final
+     * ETAPAS DO PROCESSO:
      *
-     * IMPORTANTE (conceito de arquitetura): - Este método está acoplado a um fluxo sequencial
-     * crítico - Se pagamento falhar, o fluxo quebra (não há tratamento de rollback aqui) - Em
-     * sistemas reais, isso deveria ser transacional (@Transactional) para garantir consistência do
-     * banco
+     * 1) Criação da entidade Order em memória - status inicial: "CREATED" - ainda
+     * NÃO foi
+     * persistida no banco
      *
-     * POSSÍVEL PROBLEMA ATUAL: - Order pode ser salva como CREATED - Payment pode falhar - Email
-     * não será enviado - Sistema pode ficar inconsistente
+     * 2) Persistência no banco de dados - o pedido passa a existir no PostgreSQL
      *
-     * @param amount valor do pedido recebido da camada Controller
-     * @return Order final com status atualizado
+     * 3) Publicação de evento no RabbitMQ - envia mensagem para exchange - outros
+     * sistemas podem
+     * reagir (ex: pagamento, envio, etc.)
+     *
+     * RESULTADO: - Pedido criado e armazenado - Evento disparado para integração
+     * assíncrona
+     *
+     * ========== CONCEITOS IMPORTANTES ENVOLVIDOS ==========
+     *
+     * ✔ Arquitetura orientada a eventos: - desacoplamento entre serviços -
+     * comunicação via
+     * mensageria
+     *
+     * ✔ Persistência com JPA: - entidade salva automaticamente
+     *
+     * ✔ Separação de responsabilidades: - Service → regra de negócio - Repository →
+     * banco -
+     * Messaging → integração
+     *
+     * ========== PONTOS DE ATENÇÃO (MUNDO REAL) ==========
+     *
+     * ⚠ Falta de transação (@Transactional): - se falhar após salvar, pode gerar
+     * inconsistência
+     *
+     * ⚠ Ordem das operações: - salva no banco antes de publicar evento - pode gerar
+     * problemas se a
+     * publicação falhar
+     *
+     * ✔ Solução comum: - usar padrão "Outbox Pattern" - garantir consistência entre
+     * banco e
+     * mensageria
+     *
+     * ⚠ Validação de entrada: - aqui não temos validação (ex: valor negativo) -
+     * importante para
+     * robustez do sistema
+     *
+     * @param amount valor monetário do pedido
+     * @return Order criada e persistida
      */
     public Order createOrder(BigDecimal amount) {
         /**
-         * 1. Criação da entidade em memória Status inicial: CREATED (pedido ainda não finalizado)
+         * 1. Criação da entidade em memória
+         *
+         * - Ainda NÃO está no banco - Apenas objeto Java
          */
         Order savedOrder = Order.builder().amount(amount).status("CREATED").build();
         /**
-         * 2. Persistência inicial no banco de dados Aqui o pedido já existe fisicamente no
-         * PostgreSQL
+         * 2. Persistência no banco de dados
+         *
+         * - Aqui o Hibernate executa um INSERT - O ID (UUID) é gerado automaticamente
          */
         orderRepository.save(savedOrder);
         /**
-         * 3. Integração com sistema externo de pagamento
+         * 3. Publicação de evento no RabbitMQ
          *
-         * Possível ponto de falha: - Timeout - Falha simulada (como no seu Random) - Serviço
-         * indisponível
-         */
-        paymentService.processPayment();
-        /**
-         * 4. Integração com serviço de email
+         * - Dispara um evento de domínio: "Order Created"
          *
-         * Objetivo: - Notificar cliente que pedido foi processado
+         * - Outros serviços podem consumir: → pagamento → envio → faturamento
          */
-        emailService.sendEmail();
+        orderPublisher.publishOrderCreated(savedOrder);
         /**
-         * 5. Atualização de estado do pedido Se chegou até aqui, assume sucesso total do fluxo
+         * Retorno do objeto persistido
+         *
+         * - Já contém ID gerado - Status ainda é "CREATED"
          */
-        savedOrder.setStatus("COMPLETED");
-        /**
-         * 6. Persistência final do estado atualizado
-         */
-        return orderRepository.save(savedOrder);
+        return savedOrder;
     }
 }

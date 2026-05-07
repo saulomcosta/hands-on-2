@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.hands_on.arquiteto.entity.Order;
 import com.hands_on.arquiteto.service.OrderService;
 
+
 /**
  * CAMADA: CONTROLLER (Camada de Apresentação / API REST)
  *
@@ -23,7 +24,7 @@ import com.hands_on.arquiteto.service.OrderService;
  * prefixo base de todas as rotas
  */
 @RestController
-@RequestMapping("/orders")
+@RequestMapping("/orders-2")
 public class OrderController {
 
     /**
